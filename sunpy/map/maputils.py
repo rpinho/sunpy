@@ -188,7 +188,7 @@ def sample_at_coords(smap, coordinates):
     --------
     .. minigallery:: sunpy.map.sample_at_coords
     """
-    if not all(contains_coordinate(smap, coordinates)):
+    if not np.all(contains_coordinate(smap, coordinates)):
         raise ValueError('At least one coordinate is not within the bounds of the map.')
 
     return u.Quantity(smap.data[smap.wcs.world_to_array_index(coordinates)], smap.unit)

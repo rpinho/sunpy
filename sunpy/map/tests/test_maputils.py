@@ -317,3 +317,24 @@ def test_pixelate_coord_path_bresenham(aia171_test_map, x, y, sampled_x, sampled
         sampled_pixels = aia171_test_map.wcs.world_to_pixel(sampled_coords)
         assert np.allclose(sampled_pixels[0], sxx)
         assert np.allclose(sampled_pixels[1], syy)
+
+
+@pytest.mark.parametrize('shape', [(), (1,), (2, 2)])
+def test_sample_at_coords_shapes(aia171_test_map, shape):
+    x = np.full(shape, 2.)
+    y = np.full(shape, 1.)
+    coordinates = aia171_test_map.wcs.pixel_to_world(x, y)
+    sampled = sample_at_coords(aia171_test_map, coordinates)
+    assert sampled.shape == shape
+    assert sampled.unit == aia171_test_map.unit
+    np.testing.assert_array_equal(sampled.value,
+                                  np.full(shape, aia171_test_map.data[1, 2]))
+
+
+@pytest.mark.parametrize('shape', [(), (1,), (2, 2)])
+def test_sample_at_coords_outside_shapes(aia171_test_map, shape):
+    x = np.full(shape, -2.)
+    y = np.zeros(shape)
+    coordinates = aia171_test_map.wcs.pixel_to_world(x, y)
+    with pytest.raises(ValueError, match='At least one coordinate is not within the bounds'):
+        sample_at_coords(aia171_test_map, coordinates)
