@@ -578,3 +578,44 @@ def test_repr_html_single_column():
 # Extracting column as quantity or array#ts_eve = ts_eve.add_column(colname, qua_new, overwrite=True)
 # Updating a column using quantity or array#ts_eve = ts_eve.add_column(colname, qua_new, overwrite=True)
 # Updating the units# ts_eve = ts_eve.add_column(colname, qua_new, unit=unit, overwrite=True)
+
+
+@pytest.mark.parametrize('container', [list, tuple, iter])
+@pytest.mark.parametrize('same_source', [False, True])
+def test_concatenate_iterables(container, same_source):
+    index = pd.date_range('2024-01-01', periods=3, freq='s')
+    units = {'flux': u.W / u.m**2}
+    series = [GenericTimeSeries(DataFrame({'flux': [value]}, index=index[i:i+1]),
+                                {'sample': i}, units.copy())
+              for i, value in enumerate([1., 2., 3.])]
+    actual = series[0].concatenate(container(series[1:]), same_source=same_source)
+    expected = DataFrame({'flux': [1., 2., 3.]}, index=index)
+    assert_frame_equal(actual.to_dataframe(), expected)
+    assert actual.units == units
+    assert len(actual.meta.metadata) == 3
+
+
+@pytest.mark.parametrize('same_source', [False, True])
+def test_concatenate_generator(same_source):
+    index = pd.date_range('2024-01-01', periods=2, freq='s')
+    units = {'flux': u.W / u.m**2}
+    first = GenericTimeSeries(DataFrame({'flux': [1.]}, index=index[:1]), {}, units.copy())
+    second = GenericTimeSeries(DataFrame({'flux': [2.]}, index=index[1:]), {}, units.copy())
+    actual = first.concatenate((series for series in [second]), same_source=same_source)
+    assert_frame_equal(actual.to_dataframe(), DataFrame({'flux': [1., 2.]}, index=index))
+    assert actual.units == units
+
+
+@pytest.mark.parametrize('container', [list, tuple, iter])
+def test_concatenate_iterable_self(eve_test_ts, container):
+    assert eve_test_ts.concatenate(container([eve_test_ts])) is eve_test_ts
+
+
+@pytest.mark.parametrize('container', [list, tuple, iter])
+def test_concatenate_empty_iterable(eve_test_ts, container):
+    assert eve_test_ts.concatenate(container([])) == eve_test_ts
+
+
+def test_concatenate_generator_source_mismatch(eve_test_ts, fermi_gbm_test_ts):
+    with pytest.raises(TypeError, match="TimeSeries classes must match"):
+        eve_test_ts.concatenate((series for series in [fermi_gbm_test_ts]), same_source=True)

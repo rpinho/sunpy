@@ -619,6 +619,9 @@ class GenericTimeSeries:
 
         >>> timeseries_1.concatenate([timeseries_2, timeseries_3], same_source=True) # doctest: +SKIP
         """
+        if isinstance(others, Iterable):
+            others = list(others)
+
         # Check to see if nothing needs to be done in case the same TimeSeries is provided.
         if self == others:
             return self
